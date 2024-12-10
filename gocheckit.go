@@ -9,9 +9,9 @@ import (
 var Client = http.DefaultClient
 
 // Do send HEAD requests to domain in slice, n domain at the same time.
-func Do(domains []string, n int) bool {
+func Do(domains []string, n int) (string, bool) {
 	limitChan := make(chan struct{}, n)
-	resultChan := make(chan bool)
+	resultChan := make(chan string)
 	var wg sync.WaitGroup
 	checkit := func(domain string) {
 		defer wg.Done()
@@ -21,7 +21,7 @@ func Do(domains []string, n int) bool {
 
 		res, err := Client.Head(domain)
 		if err == nil && res.StatusCode == http.StatusOK {
-			resultChan <- true
+			resultChan <- domain
 		}
 	}
 
@@ -35,11 +35,9 @@ func Do(domains []string, n int) bool {
 		close(resultChan)
 	}()
 
-	for res := range resultChan {
-		if res {
-			return true
-		}
+	for domain := range resultChan {
+		return domain, true
 	}
 
-	return false
+	return "", false
 }
